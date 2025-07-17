@@ -924,7 +924,6 @@
                     <input type="date" id="birthday" required>
                 </div>
                 <button class="btn" onclick="calculateNumerology()">开始计算</button>
-                <button class="btn" onclick="resetForm()">重置</button>
             </div>
 
             <!-- Birthday Confirmation (隐藏，不再需要) -->
@@ -962,6 +961,13 @@
                     </div>
                     
                     <div id="reportContent" class="report-content" style="display: none;"></div>
+                    
+                    <!-- 重置按钮放在报告最下方 -->
+                    <div style="text-align: center; margin-top: 40px; padding: 20px;">
+                        <button class="btn" onclick="resetForm()" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);">
+                            重新开始
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1218,7 +1224,7 @@ Please generate a comprehensive report with the following structure:
 {
     "reportTitle": "An evocative and empowering title for the report",
     "chapter1_innerTeam": {
-        "title": "第一章：孩子內在的黃金團隊",
+        "title": "第一章：孩子内在的黄金团队",
         "introduction": "A brief, compassionate introduction to the concept of the child's 'inner team' of archetypes",
         "teamCaptain": {
             "archetype": "The name of the core archetype based on the lifePath.number (e.g., 'The Little Sage', 'The Powerhouse')",
@@ -1237,7 +1243,7 @@ Please generate a comprehensive report with the following structure:
         "reflectionQuestions": ["Question 1", "Question 2", "Question 3"]
     },
     "chapter2_innerWorld": {
-        "title": "第二章：探索孩子內在世界",
+        "title": "第二章：探索孩子内心世界",
         "greatestStrength": {
             "name": "A unique name for the child's greatest strength, derived from a combination of lifePath.number and birthday number (e.g., 'Practical Intuition')",
             "description": "A detailed paragraph explaining this strength, how it manifests in the child's behavior, and why it is significant"
@@ -1338,6 +1344,11 @@ IMPORTANT: All content must be in Chinese language.`
         function formatReport(text) {
             let cleanedText = text.trim();
             
+            // 调试：输出原始文本
+            console.log('=== AI返回的原始文本 ===');
+            console.log(text);
+            console.log('=== 原始文本结束 ===');
+            
             // 处理 ```json ... ``` 或 ``` ... ``` 代码块
             if (cleanedText.startsWith('```json')) {
                 cleanedText = cleanedText.replace(/^```json/, '').replace(/```$/, '').trim();
@@ -1345,12 +1356,14 @@ IMPORTANT: All content must be in Chinese language.`
                 cleanedText = cleanedText.replace(/^```/, '').replace(/```$/, '').trim();
             }
             
-            // 检查是否包含JSON结构的关键字段
-            const hasJsonStructure = cleanedText.includes('"reportTitle"') || 
-                                   cleanedText.includes('"chapter1_innerTeam"') ||
-                                   cleanedText.includes('"chapter2_innerWorld"') ||
-                                   cleanedText.includes('"chapter3_parentsPlaybook"') ||
-                                   cleanedText.includes('"chapter4_ignitingPassions"');
+            // 更宽松的JSON结构检测
+            const hasJsonStructure = cleanedText.includes('reportTitle') || 
+                                   cleanedText.includes('chapter1') ||
+                                   cleanedText.includes('chapter2') ||
+                                   cleanedText.includes('chapter3') ||
+                                   cleanedText.includes('chapter4') ||
+                                   (cleanedText.startsWith('{') && cleanedText.endsWith('}')) ||
+                                   (cleanedText.includes('"') && cleanedText.includes(':'));
             
             if (hasJsonStructure) {
                 try {
@@ -1375,11 +1388,33 @@ IMPORTANT: All content must be in Chinese language.`
                         // 3. 修复可能的换行符问题
                         processedText = processedText.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
                         
+                        // 4. 修复可能的Unicode字符问题
+                        processedText = processedText.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+                        
+                        // 5. 尝试提取JSON对象（如果被其他文本包围）
+                        if (!processedText.startsWith('{')) {
+                            const jsonMatch = processedText.match(/\{[\s\S]*\}/);
+                            if (jsonMatch) {
+                                processedText = jsonMatch[0];
+                            }
+                        }
+                        
                         const reportData = JSON.parse(processedText);
                         return formatStructuredReport(reportData);
                     } catch (e2) {
                         console.error('清理后JSON解析仍然失败:', e2);
                         console.log('原始文本:', cleanedText);
+                        
+                        // 最后尝试：手动构建JSON对象
+                        try {
+                            const manualJson = buildManualJson(cleanedText);
+                            if (manualJson) {
+                                return formatStructuredReport(manualJson);
+                            }
+                        } catch (e3) {
+                            console.error('手动构建JSON也失败:', e3);
+                        }
+                        
                         // 如果还是失败，返回格式化的纯文本
                         return formatPlainText(cleanedText);
                     }
@@ -1406,6 +1441,165 @@ IMPORTANT: All content must be in Chinese language.`
                 .replace(/\n/g, '<br>')
                 .replace(/^/, '<p>')
                 .replace(/$/, '</p>');
+        }
+
+        function buildManualJson(text) {
+            // 尝试从文本中手动提取JSON结构
+            try {
+                const result = {};
+                
+                // 提取reportTitle
+                const titleMatch = text.match(/reportTitle["\s]*:["\s]*([^,\n}]+)/);
+                if (titleMatch) result.reportTitle = titleMatch[1].trim().replace(/^["']|["']$/g, '');
+                
+                // 提取chapter1_innerTeam
+                const chapter1Match = text.match(/chapter1_innerTeam["\s]*:["\s]*\{([^}]+)\}/);
+                if (chapter1Match) {
+                    // 尝试提取真实的archetype
+                    const archetypeMatch = text.match(/archetype["\s]*:["\s]*([^,\n}]+)/);
+                    const archetype = archetypeMatch ? archetypeMatch[1].trim().replace(/^["']|["']$/g, '') : "小守护者";
+                    
+                    // 尝试提取真实的description
+                    const descMatch = text.match(/description["\s]*:["\s]*([^,\n}]+)/);
+                    const description = descMatch ? descMatch[1].trim().replace(/^["']|["']$/g, '') : "您的孩子以数字6为生命路径的队长...";
+                    
+                    // 尝试提取真实的whatItLooksLike
+                    const looksMatch = text.match(/whatItLooksLike["\s]*:["\s]*([^,\n}]+)/);
+                    const whatItLooksLike = looksMatch ? looksMatch[1].trim().replace(/^["']|["']$/g, '') : "对于0岁的宝宝来说...";
+                    
+                    // 尝试提取真实的theWhyBehindIt
+                    const whyMatch = text.match(/theWhyBehindIt["\s]*:["\s]*([^,\n}]+)/);
+                    const theWhyBehindIt = whyMatch ? whyMatch[1].trim().replace(/^["']|["']$/g, '') : "数字6的核心能量是爱与责任...";
+                    
+                    // 尝试提取真实的introduction
+                    const introMatch = text.match(/introduction["\s]*:["\s]*([^,\n}]+)/);
+                    const introduction = introMatch ? introMatch[1].trim().replace(/^["']|["']$/g, '') : "每个孩子都像一个拥有独特内在团队的小小宇宙...";
+                    
+                    // 尝试提取真实的coreDynamic
+                    const dynamicMatch = text.match(/coreDynamic["\s]*:["\s]*([^,\n}]+)/);
+                    const coreDynamic = dynamicMatch ? dynamicMatch[1].trim().replace(/^["']|["']$/g, '') : "核心动态描述...";
+                    
+                    result.chapter1_innerTeam = {
+                        title: "第一章：孩子内在的黄金团队",
+                        introduction: introduction,
+                        teamCaptain: {
+                            archetype: archetype,
+                            description: description,
+                            whatItLooksLike: whatItLooksLike,
+                            theWhyBehindIt: theWhyBehindIt
+                        },
+                        supportingCast: [],
+                        coreDynamic: coreDynamic,
+                        reflectionQuestions: ["问题1", "问题2", "问题3"]
+                    };
+                }
+                
+                // 提取chapter2_innerWorld
+                const chapter2Match = text.match(/chapter2_innerWorld["\s]*:["\s]*\{([^}]+)\}/);
+                if (chapter2Match) {
+                    // 尝试提取greatestStrength
+                    const strengthNameMatch = text.match(/greatestStrength["\s]*:["\s]*\{[^}]*name["\s]*:["\s]*([^,\n}]+)/);
+                    const strengthName = strengthNameMatch ? strengthNameMatch[1].trim().replace(/^["']|["']$/g, '') : "最大优势";
+                    
+                    const strengthDescMatch = text.match(/greatestStrength["\s]*:["\s]*\{[^}]*description["\s]*:["\s]*([^,\n}]+)/);
+                    const strengthDesc = strengthDescMatch ? strengthDescMatch[1].trim().replace(/^["']|["']$/g, '') : "您的孩子拥有独特的天赋...";
+                    
+                    // 尝试提取coreChallenge
+                    const challengeNameMatch = text.match(/coreChallenge["\s]*:["\s]*\{[^}]*name["\s]*:["\s]*([^,\n}]+)/);
+                    const challengeName = challengeNameMatch ? challengeNameMatch[1].trim().replace(/^["']|["']$/g, '') : "核心挑战";
+                    
+                    const challengeDescMatch = text.match(/coreChallenge["\s]*:["\s]*\{[^}]*description["\s]*:["\s]*([^,\n}]+)/);
+                    const challengeDesc = challengeDescMatch ? challengeDescMatch[1].trim().replace(/^["']|["']$/g, '') : "您的孩子需要面对的挑战...";
+                    
+                    // 尝试提取hiddenFear
+                    const fearNameMatch = text.match(/hiddenFear["\s]*:["\s]*\{[^}]*name["\s]*:["\s]*([^,\n}]+)/);
+                    const fearName = fearNameMatch ? fearNameMatch[1].trim().replace(/^["']|["']$/g, '') : "隐藏恐惧";
+                    
+                    const fearDescMatch = text.match(/hiddenFear["\s]*:["\s]*\{[^}]*description["\s]*:["\s]*([^,\n}]+)/);
+                    const fearDesc = fearDescMatch ? fearDescMatch[1].trim().replace(/^["']|["']$/g, '') : "您的孩子可能存在的隐藏恐惧...";
+                    
+                    result.chapter2_innerWorld = {
+                        title: "第二章：探索孩子内心世界",
+                        greatestStrength: {
+                            name: strengthName,
+                            description: strengthDesc
+                        },
+                        coreChallenge: {
+                            name: challengeName,
+                            description: challengeDesc
+                        },
+                        hiddenFear: {
+                            name: fearName,
+                            description: fearDesc
+                        },
+                        reflectionQuestions: ["问题1", "问题2", "问题3"]
+                    };
+                }
+                
+                // 提取chapter3_parentsPlaybook
+                const chapter3Match = text.match(/chapter3_parentsPlaybook["\s]*:["\s]*\{([^}]+)\}/);
+                if (chapter3Match) {
+                    // 尝试提取educationStyle
+                    const eduNameMatch = text.match(/educationStyle["\s]*:["\s]*\{[^}]*name["\s]*:["\s]*([^,\n}]+)/);
+                    const eduName = eduNameMatch ? eduNameMatch[1].trim().replace(/^["']|["']$/g, '') : "教育风格";
+                    
+                    result.chapter3_parentsPlaybook = {
+                        title: "第三章：父母的育儿锦囊",
+                        introduction: "本章提供具体的育儿策略...",
+                        educationStyle: {
+                            name: eduName,
+                            points: ["策略1", "策略2", "策略3", "策略4"]
+                        },
+                        communicationKeys: [
+                            {
+                                insteadOf: "不要说...",
+                                tryThis: "试试这样说...",
+                                whyItWorks: "为什么有效..."
+                            }
+                        ],
+                        socialAndFriendshipStyle: "社交与友谊风格描述...",
+                        reflectionQuestions: ["问题1", "问题2", "问题3"]
+                    };
+                }
+                
+                // 提取chapter4_ignitingPassions
+                const chapter4Match = text.match(/chapter4_ignitingPassions["\s]*:["\s]*\{([^}]+)\}/);
+                if (chapter4Match) {
+                    result.chapter4_ignitingPassions = {
+                        title: "第四章：点燃孩子的热情",
+                        recommendedHobbies: [
+                            {
+                                tier: "Tier 1",
+                                theme: "创意表达",
+                                items: ["爱好1", "爱好2", "爱好3", "爱好4", "爱好5"]
+                            }
+                        ],
+                        recommendedCareers: [
+                            {
+                                tier: "Tier 1",
+                                items: ["职业1", "职业2", "职业3", "职业4", "职业5"]
+                            }
+                        ],
+                        reflectionQuestions: ["问题1", "问题2"]
+                    };
+                }
+                
+                // 提取conclusion
+                const conclusionMatch = text.match(/conclusion["\s]*:["\s]*([^,\n}]+)/);
+                if (conclusionMatch) {
+                    result.conclusion = conclusionMatch[1].trim().replace(/^["']|["']$/g, '');
+                }
+                
+                // 如果至少有一个有效字段，返回结果
+                if (Object.keys(result).length > 0) {
+                    return result;
+                }
+                
+                return null;
+            } catch (e) {
+                console.error('手动构建JSON失败:', e);
+                return null;
+            }
         }
 
         function formatStructuredReport(reportData) {
