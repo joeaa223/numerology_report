@@ -1332,29 +1332,76 @@ IMPORTANT: All content must be in Chinese language.`
         }
 
         function formatReport(text) {
-            try {
-                // 尝试解析JSON格式的报告
-                const reportData = JSON.parse(text);
-                return formatStructuredReport(reportData);
-            } catch (e) {
-                // 如果不是JSON格式，清理文本并格式化显示
-                let cleanedText = text
-                    .replace(/\*\*/g, '') // 去除粗体标记
-                    .replace(/\*/g, '')   // 去除斜体标记
-                    .replace(/#{1,6}\s/g, '') // 去除标题标记
-                    .replace(/`/g, '')    // 去除代码标记
-                    .replace(/\{/g, '')   // 去除JSON大括号
-                    .replace(/\}/g, '')   // 去除JSON大括号
-                    .replace(/"/g, '')    // 去除引号
-                    .replace(/:/g, '：')  // 将冒号替换为中文冒号
-                    .replace(/,/g, '，')  // 将逗号替换为中文逗号
-                    .replace(/\n\n/g, '</p><p>')
-                    .replace(/\n/g, '<br>')
-                    .replace(/^/, '<p>')
-                    .replace(/$/, '</p>');
-                
-                return cleanedText;
+            let cleanedText = text.trim();
+            
+            // 处理 ```json ... ``` 或 ``` ... ``` 代码块
+            if (cleanedText.startsWith('```json')) {
+                cleanedText = cleanedText.replace(/^```json/, '').replace(/```$/, '').trim();
+            } else if (cleanedText.startsWith('```')) {
+                cleanedText = cleanedText.replace(/^```/, '').replace(/```$/, '').trim();
             }
+            
+            // 检查是否包含JSON结构的关键字段
+            const hasJsonStructure = cleanedText.includes('"reportTitle"') || 
+                                   cleanedText.includes('"chapter1_innerTeam"') ||
+                                   cleanedText.includes('"chapter2_innerWorld"') ||
+                                   cleanedText.includes('"chapter3_parentsPlaybook"') ||
+                                   cleanedText.includes('"chapter4_ignitingPassions"');
+            
+            if (hasJsonStructure) {
+                try {
+                    // 尝试解析JSON格式的报告
+                    const reportData = JSON.parse(cleanedText);
+                    return formatStructuredReport(reportData);
+                } catch (e) {
+                    console.warn('JSON解析失败，尝试清理后重新解析:', e);
+                    
+                    // 如果JSON解析失败，尝试清理一些常见问题
+                    try {
+                        // 移除可能的markdown格式
+                        let processedText = cleanedText.replace(/\*\*/g, '').replace(/\*/g, '');
+                        
+                        // 尝试修复常见的JSON格式问题
+                        // 1. 修复末尾多余的逗号
+                        processedText = processedText.replace(/,(\s*[}\]])/g, '$1');
+                        
+                        // 2. 修复可能的单引号问题
+                        processedText = processedText.replace(/'/g, '"');
+                        
+                        // 3. 修复可能的换行符问题
+                        processedText = processedText.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+                        
+                        const reportData = JSON.parse(processedText);
+                        return formatStructuredReport(reportData);
+                    } catch (e2) {
+                        console.error('清理后JSON解析仍然失败:', e2);
+                        console.log('原始文本:', cleanedText);
+                        // 如果还是失败，返回格式化的纯文本
+                        return formatPlainText(cleanedText);
+                    }
+                }
+            } else {
+                // 如果没有JSON结构，直接格式化为纯文本
+                return formatPlainText(cleanedText);
+            }
+        }
+
+        function formatPlainText(text) {
+            // 格式化纯文本显示
+            return text
+                .replace(/\*\*/g, '') // 去除粗体标记
+                .replace(/\*/g, '')   // 去除斜体标记
+                .replace(/#{1,6}\s/g, '') // 去除标题标记
+                .replace(/`/g, '')    // 去除代码标记
+                .replace(/\{/g, '')   // 去除JSON大括号
+                .replace(/\}/g, '')   // 去除JSON大括号
+                .replace(/"/g, '')    // 去除引号
+                .replace(/:/g, '：')  // 将冒号替换为中文冒号
+                .replace(/,/g, '，')  // 将逗号替换为中文逗号
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>')
+                .replace(/^/, '<p>')
+                .replace(/$/, '</p>');
         }
 
         function formatStructuredReport(reportData) {
