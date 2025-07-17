@@ -1311,6 +1311,9 @@ IMPORTANT: All content must be in Chinese language.`
                     const reportText = data.candidates[0].content.parts[0].text;
                     displayReport(reportText);
                     showSuccess('AI报告生成成功！');
+                    // 生成成功后，永久禁用按钮
+                    document.getElementById('generateReportBtn').disabled = true;
+                    document.getElementById('generateReportBtn').textContent = '报告已生成';
                 } else {
                     throw new Error('API响应格式错误');
                 }
@@ -1318,9 +1321,10 @@ IMPORTANT: All content must be in Chinese language.`
             } catch (error) {
                 console.error('生成报告时出错:', error);
                 showError(`生成报告失败: ${error.message}`);
+                // 如果生成失败，重新启用按钮
+                document.getElementById('generateReportBtn').disabled = false;
             } finally {
                 document.getElementById('loadingReport').style.display = 'none';
-                document.getElementById('generateReportBtn').disabled = false;
             }
         }
 
@@ -1578,7 +1582,9 @@ IMPORTANT: All content must be in Chinese language.`
             document.getElementById('resultsSection').classList.remove('show');
             document.getElementById('reportContent').style.display = 'none';
             document.getElementById('loadingReport').style.display = 'none';
+            // 重新启用按钮并恢复原始文本
             document.getElementById('generateReportBtn').disabled = false;
+            document.getElementById('generateReportBtn').textContent = '生成AI报告';
             
             // 保持JSON数据区域隐藏
             document.getElementById('calculationResults').style.display = 'none';
