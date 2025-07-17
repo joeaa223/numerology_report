@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>命理报告生成器 - Numerology Report Generator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .input-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin-right: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results-section {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .results-section.show {
+            display: block;
+        }
+
+        .birthday-confirmation {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+
+        .calculation-results {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            border: 1px solid #dee2e6;
+        }
+
+        .report-section {
+            background: #fff;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #dc3545;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+
+        .api-key-section {
+            background: #fff3cd;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ffc107;
+        }
+
+        .api-key-section input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .report-content {
+            background: white;
+            padding: 0;
+            border-radius: 0;
+            margin-top: 20px;
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            line-height: 1.6;
+            border: none;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .master-number {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+
+        .master-number .stat-number {
+            color: white;
+        }
+
+        .master-number .stat-label {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .karmic-debt {
+            background: linear-gradient(135deg, #ff9ff3, #f368e0);
+            color: white;
+        }
+
+        .karmic-debt .stat-number {
+            color: white;
+        }
+
+        .karmic-debt .stat-label {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .terminal-output {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            margin: 20px 0;
+            border: 1px solid #333;
+        }
+
+        .chapter {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .chapter h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .archetype {
+            background: #f0f4ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .strength-challenge {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin: 25px 0;
+        }
+
+        .strength, .challenge {
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .strength {
+            background: #f0f9f0;
+            border-left: 4px solid #28a745;
+        }
+
+        .challenge {
+            background: #fff8e1;
+            border-left: 4px solid #ffc107;
+        }
+
+        .strength h4, .challenge h4 {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .strength h4 {
+            color: #28a745;
+        }
+
+        .challenge h4 {
+            color: #ffc107;
+        }
+
+        .communication-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            border-left: 4px solid #17a2b8;
+            box-shadow: 0 3px 10px rgba(23, 162, 184, 0.1);
+        }
+
+        .communication-item p {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        .communication-item strong {
+            color: #17a2b8;
+            font-weight: 600;
+        }
+
+        .hobby-career {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin: 25px 0;
+        }
+
+        .hobbies, .careers {
+            padding: 25px;
+            border-radius: 15px;
+            background: #f8f9fa;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .hobbies h4, .careers h4 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+
+        .tier {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: inline-block;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .reflection-questions {
+            background: #e8f4fd;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 25px 0;
+            border-left: 4px solid #2196f3;
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.1);
+        }
+
+        .reflection-questions h4 {
+            color: #2196f3;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+
+        .reflection-questions ul {
+            margin-left: 20px;
+        }
+
+        .reflection-questions li {
+            margin: 12px 0;
+            line-height: 1.6;
+        }
+
+        .report-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .report-header h1 {
+            margin: 0;
+            font-size: 2.2em;
+            font-weight: 700;
+            line-height: 1.3;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .chapter {
+            margin-bottom: 40px;
+            padding: 30px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            border: 1px solid #f0f0f0;
+        }
+
+        .chapter h2 {
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        .introduction {
+            font-size: 1.2em;
+            line-height: 1.7;
+            color: #333;
+            margin-bottom: 30px;
+            font-weight: 400;
+        }
+
+        .archetype {
+            background: #f8f9ff;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 25px 0;
+            border-left: 5px solid #667eea;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.1);
+        }
+
+        .archetype h3 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            font-weight: 600;
+        }
+
+        .supporting-cast {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border-left: 4px solid #17a2b8;
+            box-shadow: 0 3px 10px rgba(23, 162, 184, 0.1);
+        }
+
+        .supporting-cast h5 {
+            color: #17a2b8;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        .supporting-cast small {
+            color: #666;
+            font-style: italic;
+            font-size: 0.9em;
+        }
+
+        .core-dynamic {
+            background: #fff8e1;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 25px 0;
+            border-left: 5px solid #ffc107;
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.1);
+        }
+
+        .education-style {
+            background: #f0f9f0;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 25px 0;
+            border-left: 5px solid #28a745;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.1);
+        }
+
+        .education-style h4 {
+            color: #28a745;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+
+        .social-style {
+            background: #e8f4fd;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 25px 0;
+            border-left: 5px solid #2196f3;
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.1);
+        }
+
+        .social-style h4 {
+            color: #2196f3;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+
+        .hidden-fear {
+            background: #fdf2f7;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 25px 0;
+            border-left: 5px solid #e91e63;
+            box-shadow: 0 4px 15px rgba(233, 30, 99, 0.1);
+        }
+
+        .hidden-fear h4 {
+            color: #e91e63;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+
+        .conclusion {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            margin-top: 40px;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .conclusion h3 {
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        .hobby-tier, .career-tier {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .hobby-tier h5, .career-tier h5 {
+            color: #667eea;
+            margin: 15px 0;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .strength-challenge, .hobby-career {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .main-content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>命理报告生成器</h1>
+            <p>基于生辰八字的个性化命理分析与AI指导报告</p>
+        </div>
+
+        <div class="main-content">
+            <!-- API Key Section -->
+            <div class="api-key-section" style="display: none;">
+                <h3>🔑 Google AI API 设置</h3>
+                <p>API Key 已内置，无需手动输入</p>
+                <input type="hidden" id="apiKey" value="AIzaSyCX51DneYJG1IVXF37MzLhglZtT9Jkg1bQ">
+            </div>
+
+
+
+            <!-- Input Section -->
+            <div class="input-section">
+                <h2>📅 输入生辰信息</h2>
+                <div class="input-group">
+                    <label for="birthday">请按格式 YYYY-MM-DD 输入您孩子的阳历出生日期：</label>
+                    <input type="date" id="birthday" required>
+                </div>
+                <button class="btn" onclick="calculateNumerology()">开始计算</button>
+                <button class="btn" onclick="resetForm()">重置</button>
+            </div>
+
+            <!-- Birthday Confirmation (隐藏，不再需要) -->
+            <div id="birthdayConfirmation" class="birthday-confirmation" style="display: none;">
+                <h3>确认出生日期</h3>
+                <p id="birthdayDisplay"></p>
+                <button class="btn" onclick="confirmBirthday()">确认 (Y)</button>
+                <button class="btn" onclick="resetForm()">修正 (N)</button>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="results-section">
+                <h2>📊 计算结果</h2>
+                
+                <!-- 统计卡片 -->
+                <div class="stats-grid" id="statsGrid">
+                    <!-- 统计卡片将在这里动态生成 -->
+                </div>
+
+                <!-- 多边形图表 -->
+                <div class="chart-container">
+                    <canvas id="numerologyChart"></canvas>
+                </div>
+
+                <!-- 原始数据显示 (已隐藏) -->
+                <div id="calculationResults" class="calculation-results" style="display: none;"></div>
+                
+                <div class="report-section">
+                    <h2>📋 个性化分析报告</h2>
+                    <button class="btn" onclick="generateReport()" id="generateReportBtn">生成AI报告</button>
+                    
+                    <div id="loadingReport" class="loading" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>正在生成AI报告，请稍候...</p>
+                    </div>
+                    
+                    <div id="reportContent" class="report-content" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let calculationResults = null;
+        let confirmedBirthday = null;
+        let chart = null;
+        const language = "Mandarin"; // 与原始脚本保持一致
+
+        function calculateNumerology() {
+            const birthdayInput = document.getElementById('birthday');
+            const birthday = birthdayInput.value;
+
+            if (!birthday) {
+                showError('请输入出生日期');
+                return;
+            }
+
+            const [year, month, day] = birthday.split('-');
+            
+            if (!year || !month || !day) {
+                showError('日期格式不正确，请确保为 YYYY-MM-DD 格式');
+                return;
+            }
+
+            if (parseInt(month) > 12 || parseInt(day) > 31) {
+                showError('日期格式不正确，请确保为 YYYY-MM-DD 格式且日期有效');
+                return;
+            }
+
+            // 直接进行计算，不需要确认
+            confirmedBirthday = { year, month, day };
+            confirmBirthday();
+        }
+
+        function confirmBirthday() {
+            if (!confirmedBirthday) return;
+
+            const { year, month, day } = confirmedBirthday;
+            
+            // 执行命理计算
+            calculationResults = processNumbers(year, month, day);
+            
+            // 显示结果
+            displayCalculationResults(calculationResults);
+            document.getElementById('resultsSection').classList.add('show');
+            document.getElementById('birthdayConfirmation').style.display = 'none';
+            
+            showSuccess('计算完成！可以生成AI报告了。');
+        }
+
+        function processNumbers(yearStr, monthStr, dayStr) {
+            // 复制原JavaScript文件中的计算逻辑
+            const A = parseInt(dayStr[0], 10);
+            const B = parseInt(dayStr[1], 10);
+            const C = parseInt(monthStr[0], 10);
+            const D = parseInt(monthStr[1], 10);
+            const E = parseInt(yearStr[0], 10);
+            const F = parseInt(yearStr[1], 10);
+            const G = parseInt(yearStr[2], 10);
+            const H = parseInt(yearStr[3], 10);
+
+            const I = addRule(A, B);
+            const J = addRule(C, D);
+            const K = addRule(E, F);
+            const L = addRule(G, H);
+            const M = addRule(I, J);
+            const N = addRule(K, L);
+            const O = addRule(M, N); // Main Personality Number
+            const P = addRule(M, O);
+            const Q = addRule(N, O);
+            const R = addRule(Q, P);
+            const X = addRule(I, M);
+            const W = addRule(J, M);
+            const S = addRule(X, W);
+            const V = addRule(K, N);
+            const U = addRule(L, N);
+            const T = addRule(V, U);
+
+            // 标准毕达哥拉斯计算
+            const monthVal = parseInt(monthStr, 10);
+            const dayVal = parseInt(dayStr, 10);
+            const yearVal = parseInt(yearStr, 10);
+            const currentYear = 2025;
+
+            // 1. 生日数字
+            const birthdayNumber = reduceNumber(dayVal);
+
+            // 2. 生命路径数字
+            const reducedMonth = reduceNumber(monthVal);
+            const reducedDay = reduceNumber(dayVal);
+            const reducedYear = reduceNumber(String(yearVal).split('').reduce((acc, digit) => acc + parseInt(digit, 10), 0));
+            
+            const lifePathSum = reducedMonth + reducedDay + reducedYear;
+            const lifePathNumber = reduceNumber(lifePathSum);
+            
+            let karmicDebtOrigin = null;
+            if ([13, 14, 16, 19].includes(lifePathSum)) {
+                karmicDebtOrigin = lifePathSum;
+            }
+
+            // 3. 挑战数字
+            const challengeMonth = forceReduceToSingleDigit(reducedMonth);
+            const challengeDay = forceReduceToSingleDigit(reducedDay);
+            const challengeYear = forceReduceToSingleDigit(reducedYear);
+
+            const challenge1 = Math.abs(challengeMonth - challengeDay);
+            const challenge2 = Math.abs(challengeDay - challengeYear);
+            const mainChallenge = Math.abs(challenge1 - challenge2);
+            
+            const ageInTargetYear = currentYear - yearVal;
+            const firstChallengeEndAge = 36 - forceReduceToSingleDigit(lifePathNumber);
+            
+            let currentChallenge = { number: null, period: 'main' };
+            if (ageInTargetYear <= firstChallengeEndAge) {
+                currentChallenge = { number: challenge1, period: 'first' };
+            } else {
+                currentChallenge = { number: challenge2, period: 'second' };
+            }
+
+            // 4. 个人年数字
+            const personalYearNumber = reduceNumber(reducedMonth + reducedDay + reduceNumber(currentYear));
+
+            return {
+                age: currentYear - parseInt(yearStr, 10),
+                mainPersonality: O,
+                lifePath: {
+                    number: lifePathNumber,
+                    isMaster: [11, 22].includes(lifePathNumber),
+                    karmicDebtOrigin: karmicDebtOrigin
+                },
+                birthday: birthdayNumber,
+                challenges: {
+                    main: mainChallenge,
+                    current: currentChallenge
+                },
+                personalYear: personalYearNumber
+            };
+        }
+
+        function reduceNumber(num) {
+            if (num === 11 || num === 22) {
+                return num;
+            }
+            let sum = num;
+            while (sum > 9) {
+                sum = String(sum).split('').reduce((acc, digit) => acc + parseInt(digit, 10), 0);
+                if (sum === 11 || sum === 22) {
+                    return sum;
+                }
+            }
+            return sum;
+        }
+
+        function forceReduceToSingleDigit(num) {
+            let sum = num;
+            while (sum > 9) {
+                sum = String(sum).split('').reduce((acc, digit) => acc + parseInt(digit, 10), 0);
+            }
+            return sum;
+        }
+
+        function addRule(n1, n2) {
+            const sum = n1 + n2;
+            if (sum > 9 && sum !== 11 && sum !== 22) {
+                const s = String(sum);
+                const reducedSum = parseInt(s[0], 10) + parseInt(s[1], 10);
+                return reducedSum;
+            }
+            return sum;
+        }
+
+        /**
+         * Converts a number to its corresponding Wu Xing element.
+         * @param {number} num - The number to convert.
+         * @returns {string} The Wu Xing element.
+         */
+        function wuxing(num) {
+            const mapping = {
+                1: '水', 2: '土', 3: '木', 4: '木', 5: '土',
+                6: '金', 7: '金', 8: '土', 9: '火'
+            };
+            return mapping[forceReduceToSingleDigit(num)] || '未知';
+        }
+
+        async function generateReport() {
+            const apiKey = document.getElementById('apiKey').value;
+            if (!apiKey) {
+                showError('API Key 未配置，请联系管理员');
+                return;
+            }
+
+            if (!calculationResults) {
+                showError('请先完成命理计算');
+                return;
+            }
+
+            document.getElementById('loadingReport').style.display = 'block';
+            document.getElementById('generateReportBtn').disabled = true;
+            document.getElementById('reportContent').style.display = 'none';
+
+            try {
+                // 使用与原始代码相同的API调用方式
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                                    body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: `System Instruction: Numerology-Based Parenting Guide Generator
+1. #ROLE & GOAL#
+You are an expert in developmental psychology and Pythagorean numerology, with a talent for translating complex symbolic data into practical, logical, and empowering advice for parents. Your goal is to generate a comprehensive parenting guide based on a child's numerology data. The report MUST NOT be predictive or fortune-telling. It must be a logical, compassionate, and actionable tool that helps a parent understand their child's innate personality, challenges, and talents, and provides concrete strategies for education and guidance.
+
+2. #TONE & PRINCIPLES#
+
+* **Age-Appropriate Context is CRITICAL**: User is ${calculationResults.age} year old. All examples, scenarios, and advice provided in the report MUST be tailored to be age-appropriate. The expression of a 'Powerhouse' at age 6 (playground politics) is different from age 16 (school projects, part-time jobs). Explicitly mention the age context where relevant.
+
+Empowering, Not Fatalistic: Focus on potential, lessons, and guidance. Avoid absolute statements about the future.
+
+Practical & Logical: Provide concrete examples and explain the "why" behind behaviors. The karmicDebtOrigin is a tool for logical explanation, not for discussing past lives.
+
+Compassionate & Supportive: The tone should feel like a wise and caring coach speaking to a parent.
+
+Language": Use ${language} for all text, ensuring it is culturally appropriate and resonates with the target audience.
+
+Output Token: Maximum 2500 tokens for the entire report.
+
+You will utilize the numerology data given below containing all the necessary calculated numbers and information to generate the report:
+
+{
+    "mainPersonalityNumber": ${calculationResults.mainPersonality},
+    "lifePath": {
+      "number": ${calculationResults.lifePath.number},
+      "isMaster": ${calculationResults.lifePath.isMaster},
+      "karmicDebtOrigin": ${calculationResults.lifePath.karmicDebtOrigin}
+    },
+    "birthdayNumber": ${calculationResults.birthday},
+    "challengesNumber": {
+      "main": ${calculationResults.challenges.main},
+      "current": {
+        "number": ${calculationResults.challenges.current.number},
+        "period": "${calculationResults.challenges.current.period}"
+      }
+    },
+    "personalYear": ${calculationResults.personalYear},
+}
+
+Please generate a comprehensive report with the following structure:
+
+{
+    "reportTitle": "An evocative and empowering title for the report",
+    "chapter1_innerTeam": {
+        "title": "第一章：孩子內在的黃金團隊",
+        "introduction": "A brief, compassionate introduction to the concept of the child's 'inner team' of archetypes",
+        "teamCaptain": {
+            "archetype": "The name of the core archetype based on the lifePath.number (e.g., 'The Little Sage', 'The Powerhouse')",
+            "description": "A detailed paragraph describing the core traits and motivations of the Team Captain archetype",
+            "whatItLooksLike": "A paragraph of concrete, observable behaviors parents might see in their child that reflect this archetype",
+            "theWhyBehindIt": "A paragraph explaining the underlying psychological or numerological reason for the archetype's behavior"
+        },
+        "supportingCast": [
+            {
+                "archetype": "The name of the supporting archetype (e.g., 'The Nurturer', 'The Innovator')",
+                "description": "A brief description of the supporting archetype's traits and how they complement the Team Captain",
+                "sourceNumber": "A string explaining where this archetype is derived from, e.g., 'from their Birthday Number 11'"
+            }
+        ],
+        "coreDynamic": "A paragraph explaining the interplay between the Team Captain and the supporting cast, including potential conflicts and synergies",
+        "reflectionQuestions": ["Question 1", "Question 2", "Question 3"]
+    },
+    "chapter2_innerWorld": {
+        "title": "第二章：探索孩子內在世界",
+        "greatestStrength": {
+            "name": "A unique name for the child's greatest strength, derived from a combination of lifePath.number and birthday number (e.g., 'Practical Intuition')",
+            "description": "A detailed paragraph explaining this strength, how it manifests in the child's behavior, and why it is significant"
+        },
+        "coreChallenge": {
+            "name": "A clear name for the child's main life lesson (e.g., 'Building True Self-Confidence')",
+            "description": "A compassionate explanation of the core challenge, using challenges.main. If karmicDebtOrigin is present, explain it as a logical reason for this challenge"
+        },
+        "hiddenFear": {
+            "name": "A name for the child's hidden fear, inferred from the shadow side of their lifePath.number (e.g., 'Fear of Powerlessness')",
+            "description": "A paragraph explaining this fear, how it might manifest in the child's behavior, and why it is important for the parent to understand"
+        },
+        "reflectionQuestions": ["Question 1", "Question 2", "Question 3"]
+    },
+    "chapter3_parentsPlaybook": {
+        "title": "第三章：父母的育儿锦囊",
+        "introduction": "A brief introduction explaining that this chapter provides actionable strategies",
+        "educationStyle": {
+            "name": "A descriptive name for the recommended parenting/education style (e.g., 'The Empowering Coach')",
+            "points": ["Strategy 1", "Strategy 2", "Strategy 3", "Strategy 4"]
+        },
+        "communicationKeys": [
+            {
+                "insteadOf": "A common phrase a parent might say",
+                "tryThis": "A more effective and empowering alternative phrase that addresses the child's coreChallenge and hiddenFear",
+                "whyItWorks": "The psychological reason the alternative phrase is more effective"
+            }
+        ],
+        "socialAndFriendshipStyle": "A paragraph explaining the child's social tendencies based on their core archetype, with nuance added from challenges.current.number. Include how they might be learning to navigate social situations right now",
+        "reflectionQuestions": ["Question 1", "Question 2", "Question 3"]
+    },
+    "chapter4_ignitingPassions": {
+        "title": "第四章：点燃孩子的热情",
+        "recommendedHobbies": [
+            {
+                "tier": "Tier 1",
+                "theme": "A brief theme or focus for the hobbies, e.g., 'Creative Expression'",
+                "items": ["Hobby 1", "Hobby 2", "Hobby 3", "Hobby 4", "Hobby 5"]
+            }
+        ],
+        "recommendedCareers": [
+            {
+                "tier": "Tier 1",
+                "items": ["Career 1", "Career 2", "Career 3", "Career 4", "Career 5"]
+            }
+        ],
+        "reflectionQuestions": ["Question 1", "Question 2"]
+    },
+    "conclusion": "A final, uplifting paragraph summarizing the child's potential and the parent's role as a guide. It should be compassionate and empowering, leaving the parent with a sense of hope and purpose"
+}
+
+IMPORTANT: All content must be in Chinese language.`
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.7,
+                        maxOutputTokens: 6000,
+                        responseMimeType: "application/json"
+                    }
+                })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`API请求失败: ${response.status} - ${errorData.error?.message || '未知错误'}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                    const reportText = data.candidates[0].content.parts[0].text;
+                    displayReport(reportText);
+                    showSuccess('AI报告生成成功！');
+                } else {
+                    throw new Error('API响应格式错误');
+                }
+
+            } catch (error) {
+                console.error('生成报告时出错:', error);
+                showError(`生成报告失败: ${error.message}`);
+            } finally {
+                document.getElementById('loadingReport').style.display = 'none';
+                document.getElementById('generateReportBtn').disabled = false;
+            }
+        }
+
+        function displayReport(reportText) {
+            const reportContent = document.getElementById('reportContent');
+            const formattedReport = formatReport(reportText);
+            reportContent.innerHTML = formattedReport;
+            reportContent.style.display = 'block';
+        }
+
+        function formatReport(text) {
+            try {
+                // 尝试解析JSON格式的报告
+                const reportData = JSON.parse(text);
+                return formatStructuredReport(reportData);
+            } catch (e) {
+                // 如果不是JSON格式，清理文本并格式化显示
+                let cleanedText = text
+                    .replace(/\*\*/g, '') // 去除粗体标记
+                    .replace(/\*/g, '')   // 去除斜体标记
+                    .replace(/#{1,6}\s/g, '') // 去除标题标记
+                    .replace(/`/g, '')    // 去除代码标记
+                    .replace(/\{/g, '')   // 去除JSON大括号
+                    .replace(/\}/g, '')   // 去除JSON大括号
+                    .replace(/"/g, '')    // 去除引号
+                    .replace(/:/g, '：')  // 将冒号替换为中文冒号
+                    .replace(/,/g, '，')  // 将逗号替换为中文逗号
+                    .replace(/\n\n/g, '</p><p>')
+                    .replace(/\n/g, '<br>')
+                    .replace(/^/, '<p>')
+                    .replace(/$/, '</p>');
+                
+                return cleanedText;
+            }
+        }
+
+        function formatStructuredReport(reportData) {
+            let html = '';
+            
+            // 报告标题
+            if (reportData.reportTitle) {
+                html += `<div class="report-header">
+                    <h1>${reportData.reportTitle}</h1>
+                </div>`;
+            }
+
+            // 第一章：内在团队
+            if (reportData.chapter1_innerTeam) {
+                const chapter = reportData.chapter1_innerTeam;
+                html += `<div class="chapter">
+                    <h2>${chapter.title}</h2>
+                    <p class="introduction">${chapter.introduction}</p>
+                    
+                    <div class="archetype">
+                        <h3>${chapter.teamCaptain.archetype}</h3>
+                        <p><strong>核心特质：</strong>${chapter.teamCaptain.description}</p>
+                        <p><strong>表现方式：</strong>${chapter.teamCaptain.whatItLooksLike}</p>
+                        <p><strong>深层原因：</strong>${chapter.teamCaptain.theWhyBehindIt}</p>
+                    </div>
+
+                    <h4>支持性原型：</h4>
+                    ${chapter.supportingCast.map(cast => `
+                        <div class="supporting-cast">
+                            <h5>${cast.archetype}</h5>
+                            <p>${cast.description}</p>
+                            <small>${cast.sourceNumber}</small>
+                        </div>
+                    `).join('')}
+
+                    <div class="core-dynamic">
+                        <h4>核心动态：</h4>
+                        <p>${chapter.coreDynamic}</p>
+                    </div>
+
+                    <div class="reflection-questions">
+                        <h4>反思问题：</h4>
+                        <ul>
+                            ${chapter.reflectionQuestions.map(q => `<li>${q}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>`;
+            }
+
+            // 第二章：内心世界
+            if (reportData.chapter2_innerWorld) {
+                const chapter = reportData.chapter2_innerWorld;
+                html += `<div class="chapter">
+                    <h2>${chapter.title}</h2>
+                    
+                    <div class="strength-challenge">
+                        <div class="strength">
+                            <h4>${chapter.greatestStrength.name}</h4>
+                            <p>${chapter.greatestStrength.description}</p>
+                        </div>
+                        <div class="challenge">
+                            <h4>${chapter.coreChallenge.name}</h4>
+                            <p>${chapter.coreChallenge.description}</p>
+                        </div>
+                    </div>
+
+                    <div class="hidden-fear">
+                        <h4>${chapter.hiddenFear.name}</h4>
+                        <p>${chapter.hiddenFear.description}</p>
+                    </div>
+
+                    <div class="reflection-questions">
+                        <h4>反思问题：</h4>
+                        <ul>
+                            ${chapter.reflectionQuestions.map(q => `<li>${q}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>`;
+            }
+
+            // 第三章：父母指南
+            if (reportData.chapter3_parentsPlaybook) {
+                const chapter = reportData.chapter3_parentsPlaybook;
+                html += `<div class="chapter">
+                    <h2>${chapter.title}</h2>
+                    <p class="introduction">${chapter.introduction}</p>
+                    
+                    <div class="education-style">
+                        <h4>${chapter.educationStyle.name}</h4>
+                        <ul>
+                            ${chapter.educationStyle.points.map(point => `<li>${point}</li>`).join('')}
+                        </ul>
+                    </div>
+
+                    <div class="communication-keys">
+                        <h4>沟通技巧：</h4>
+                        ${chapter.communicationKeys.map(key => `
+                            <div class="communication-item">
+                                <p><strong>不要说：</strong>${key.insteadOf}</p>
+                                <p><strong>试试这样说：</strong>${key.tryThis}</p>
+                                <p><strong>为什么有效：</strong>${key.whyItWorks}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="social-style">
+                        <h4>社交与友谊风格：</h4>
+                        <p>${chapter.socialAndFriendshipStyle}</p>
+                    </div>
+
+                    <div class="reflection-questions">
+                        <h4>反思问题：</h4>
+                        <ul>
+                            ${chapter.reflectionQuestions.map(q => `<li>${q}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>`;
+            }
+
+            // 第四章：激发热情
+            if (reportData.chapter4_ignitingPassions) {
+                const chapter = reportData.chapter4_ignitingPassions;
+                html += `<div class="chapter">
+                    <h2>${chapter.title}</h2>
+                    
+                    <div class="hobby-career">
+                        <div class="hobbies">
+                            <h4>推荐爱好：</h4>
+                            ${chapter.recommendedHobbies.map(hobby => `
+                                <div class="hobby-tier">
+                                    <span class="tier">${hobby.tier}</span>
+                                    <h5>${hobby.theme}</h5>
+                                    <ul>
+                                        ${hobby.items.map(item => `<li>${item}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="careers">
+                            <h4>推荐职业：</h4>
+                            ${chapter.recommendedCareers.map(career => `
+                                <div class="career-tier">
+                                    <span class="tier">${career.tier}</span>
+                                    <ul>
+                                        ${career.items.map(item => `<li>${item}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="reflection-questions">
+                        <h4>反思问题：</h4>
+                        <ul>
+                            ${chapter.reflectionQuestions.map(q => `<li>${q}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>`;
+            }
+
+            // 总结
+            if (reportData.conclusion) {
+                html += `<div class="conclusion">
+                    <h3>总结</h3>
+                    <p>${reportData.conclusion}</p>
+                </div>`;
+            }
+
+            return html;
+        }
+
+        function resetForm() {
+            document.getElementById('birthday').value = '';
+            document.getElementById('resultsSection').classList.remove('show');
+            document.getElementById('reportContent').style.display = 'none';
+            document.getElementById('loadingReport').style.display = 'none';
+            document.getElementById('generateReportBtn').disabled = false;
+            
+            // 保持JSON数据区域隐藏
+            document.getElementById('calculationResults').style.display = 'none';
+            document.getElementById('calculationResults').textContent = '';
+            
+            // 清理图表
+            if (chart) {
+                chart.destroy();
+                chart = null;
+            }
+            
+            calculationResults = null;
+            confirmedBirthday = null;
+        }
+
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = message;
+            document.querySelector('.main-content').insertBefore(errorDiv, document.querySelector('.input-section'));
+            
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success';
+            successDiv.textContent = message;
+            document.querySelector('.main-content').insertBefore(successDiv, document.querySelector('.input-section'));
+            
+            setTimeout(() => {
+                successDiv.remove();
+            }, 5000);
+        }
+
+        function displayCalculationResults(data) {
+            // 隐藏原始JSON数据，因为现在主要显示图表
+            document.getElementById('calculationResults').style.display = 'none';
+
+            // 生成统计卡片
+            generateStatCards(data);
+
+            // 生成多边形图表
+            generatePolygonChart(data);
+        }
+
+        function generateStatCards(data) {
+            const statsGrid = document.getElementById('statsGrid');
+            statsGrid.innerHTML = '';
+
+            const stats = [
+                {
+                    label: '主性格数字',
+                    value: data.mainPersonality,
+                    class: ''
+                },
+                {
+                    label: '生命路径数字',
+                    value: data.lifePath.number,
+                    class: data.lifePath.isMaster ? 'master-number' : ''
+                },
+                {
+                    label: '生日数字',
+                    value: data.birthday,
+                    class: ''
+                },
+                {
+                    label: '主要挑战',
+                    value: data.challenges.main,
+                    class: ''
+                },
+                {
+                    label: '当前挑战',
+                    value: data.challenges.current.number,
+                    class: ''
+                },
+                {
+                    label: '个人年数字',
+                    value: data.personalYear,
+                    class: ''
+                }
+            ];
+
+            if (data.lifePath.karmicDebtOrigin) {
+                stats.push({
+                    label: '业力债务',
+                    value: data.lifePath.karmicDebtOrigin,
+                    class: 'karmic-debt'
+                });
+            }
+
+            stats.forEach(stat => {
+                const card = document.createElement('div');
+                card.className = `stat-card ${stat.class}`;
+                card.innerHTML = `
+                    <div class="stat-number">${stat.value}</div>
+                    <div class="stat-label">${stat.label}</div>
+                `;
+                statsGrid.appendChild(card);
+            });
+        }
+
+        function generatePolygonChart(data) {
+            const ctx = document.getElementById('numerologyChart').getContext('2d');
+
+            // 销毁现有图表
+            if (chart) {
+                chart.destroy();
+            }
+
+            // 准备图表数据
+            const chartData = {
+                labels: [
+                    '主性格数字',
+                    '生命路径数字', 
+                    '生日数字',
+                    '主要挑战',
+                    '当前挑战',
+                    '个人年数字'
+                ],
+                datasets: [{
+                    label: '命理数字',
+                    data: [
+                        data.mainPersonality,
+                        data.lifePath.number,
+                        data.birthday,
+                        data.challenges.main,
+                        data.challenges.current.number,
+                        data.personalYear
+                    ],
+                    backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 3,
+                    pointBackgroundColor: 'rgba(102, 126, 234, 1)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                }]
+            };
+
+            // 创建图表
+            chart = new Chart(ctx, {
+                type: 'radar',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 22,
+                            ticks: {
+                                stepSize: 2,
+                                color: '#666',
+                                font: {
+                                    size: 12
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            },
+                            angleLines: {
+                                color: 'rgba(0,0,0,0.1)'
+                            },
+                            pointLabels: {
+                                color: '#333',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: '#667eea',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.label}: ${context.parsed.r}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 设置默认日期为今天
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('birthday').value = today;
+        });
+    </script>
+</body>
+</html> 
